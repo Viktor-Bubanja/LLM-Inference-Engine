@@ -1,1 +1,1 @@
-"""Building a large language model from scratch."""
+"""General model code: architectures, weight loading, generation and training."""

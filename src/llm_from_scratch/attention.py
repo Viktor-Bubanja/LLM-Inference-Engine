@@ -59,3 +59,44 @@ class MultiHeadAttention(torch.nn.Module):
         context_vecs = (attn_weights @ values).transpose(1, 2)
         context_vecs = context_vecs.contiguous().view(b, num_tokens, self.d_out)
         return self.out_proj(context_vecs)
+
+
+class GroupedQueryAttention(torch.nn.Module):
+    """Causal self-attention in which each group of ``num_heads // num_kv_heads``
+    query heads shares one key/value head. With ``num_kv_heads == num_heads`` it
+    is ordinary multi-head attention.
+
+    Query head ``h`` uses key/value head ``h // (num_heads // num_kv_heads)``.
+    ``head_dim`` is set independently: ``num_heads * head_dim`` need not equal
+    ``d_in``.
+
+    With ``qk_norm``, queries and keys are RMS-normalised per head, over
+    ``head_dim``, before RoPE is applied.
+
+    Submodules are named as in the Qwen3 checkpoint, so weights load by name:
+    ``q_proj``, ``k_proj``, ``v_proj`` and ``o_proj`` (``nn.Linear`` without
+    bias), plus ``q_norm`` and ``k_norm`` (``RMSNorm(head_dim)``) when
+    ``qk_norm`` is set. Attention itself uses ``F.scaled_dot_product_attention``.
+    """
+
+    def __init__(
+        self,
+        d_in: int,
+        num_heads: int,
+        num_kv_heads: int,
+        head_dim: int,
+        qk_norm: bool = True,
+        rms_norm_eps: float = 1e-6,
+    ):
+        super().__init__()
+        raise NotImplementedError("M1 exercise")
+
+    def forward(
+        self, x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor
+    ) -> torch.Tensor:
+        """(b, num_tokens, d_in) -> (b, num_tokens, d_in)
+
+        ``cos`` and ``sin`` come from ``RotaryEmbedding``, shaped
+        (b, num_tokens, head_dim).
+        """
+        raise NotImplementedError("M1 exercise")

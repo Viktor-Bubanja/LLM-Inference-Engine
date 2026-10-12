@@ -7,6 +7,8 @@ from typing import Protocol
 
 import torch
 
+from llm_from_scratch.kv_cache import KVCache
+
 ResidualHook = Callable[[int, torch.Tensor, torch.Tensor], torch.Tensor]
 """``(layer, x, positions) -> x``, called on the residual stream after each
 block. ``x`` is (b, num_tokens, emb_dim) and ``positions`` is (b, num_tokens).
@@ -21,10 +23,14 @@ class CausalLM(Protocol):
     residual_hooks: list[ResidualHook]
 
     def __call__(
-        self, token_ids: torch.Tensor, positions: torch.Tensor | None = None
+        self,
+        token_ids: torch.Tensor,
+        positions: torch.Tensor | None = None,
+        cache: KVCache | None = None,
     ) -> torch.Tensor:
         """(b, num_tokens) token ids -> (b, num_tokens, vocab_size) logits.
 
-        ``positions`` defaults to ``0 .. num_tokens - 1`` for every row.
+        ``positions`` defaults to ``0 .. num_tokens - 1`` for every row, offset
+        by ``cache.length`` when a cache is given.
         """
         ...

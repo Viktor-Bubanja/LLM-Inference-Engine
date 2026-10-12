@@ -11,6 +11,7 @@ import torch.nn as nn
 
 from llm_from_scratch.attention import GroupedQueryAttention
 from llm_from_scratch.causal_lm import ResidualHook
+from llm_from_scratch.kv_cache import KVCache
 from llm_from_scratch.layers import RMSNorm, SwiGLU
 from llm_from_scratch.rope import RotaryEmbedding
 
@@ -104,9 +105,21 @@ class Qwen3Model(nn.Module):
         self.residual_hooks: list[ResidualHook] = []
 
     def forward(
-        self, token_ids: torch.Tensor, positions: torch.Tensor | None = None
+        self,
+        token_ids: torch.Tensor,
+        positions: torch.Tensor | None = None,
+        cache: KVCache | None = None,
     ) -> torch.Tensor:
-        """(b, num_tokens) -> (b, num_tokens, vocab_size) logits"""
+        """(b, num_tokens) -> (b, num_tokens, vocab_size) logits
+
+        With a ``cache``, ``token_ids`` are the tokens that follow the ones
+        already cached: the whole prompt on the first call (prefill), then one
+        or more new tokens per call (decode). Their keys and values are added
+        to the cache, and ``positions`` default to continuing from
+        ``cache.length``.
+        """
+        if cache is not None:
+            raise NotImplementedError("M2 exercise")
         if positions is None:
             batch_size, num_tokens = token_ids.shape
             positions = torch.arange(num_tokens, device=token_ids.device).expand(

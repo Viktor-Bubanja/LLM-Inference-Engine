@@ -24,6 +24,7 @@ def build_attention(
         qk_norm=qk_norm,
     )
     if qk_norm:
+        assert attention.q_norm is not None and attention.k_norm is not None
         # Norm gains start at 1; perturb them so the tests can tell q from k.
         with torch.no_grad():
             attention.q_norm.weight.normal_(1.0, 0.2)

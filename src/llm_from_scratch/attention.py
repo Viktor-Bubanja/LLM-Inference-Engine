@@ -1,4 +1,8 @@
 import torch
+import torch.nn.functional as F
+
+from llm_from_scratch.layers import RMSNorm
+from llm_from_scratch.rope import apply_rotary
 
 
 class MultiHeadAttention(torch.nn.Module):
@@ -89,7 +93,15 @@ class GroupedQueryAttention(torch.nn.Module):
         rms_norm_eps: float = 1e-6,
     ):
         super().__init__()
-        raise NotImplementedError("M1 exercise")
+        self.num_heads = num_heads
+        self.num_kv_heads = num_kv_heads
+        self.head_dim = head_dim
+        self.q_proj = torch.nn.Linear(d_in, num_heads * head_dim, bias=False)
+        self.k_proj = torch.nn.Linear(d_in, num_kv_heads * head_dim, bias=False)
+        self.v_proj = torch.nn.Linear(d_in, num_kv_heads * head_dim, bias=False)
+        self.o_proj = torch.nn.Linear(num_heads * head_dim, d_in, bias=False)
+        self.q_norm = RMSNorm(head_dim, rms_norm_eps) if qk_norm else None
+        self.k_norm = RMSNorm(head_dim, rms_norm_eps) if qk_norm else None
 
     def forward(
         self, x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor
@@ -99,4 +111,21 @@ class GroupedQueryAttention(torch.nn.Module):
         ``cos`` and ``sin`` come from ``RotaryEmbedding``, shaped
         (b, num_tokens, head_dim).
         """
-        raise NotImplementedError("M1 exercise")
+        b, num_tokens, _ = x.shape
+        q = self.q_proj(x).view(b, num_tokens, self.num_heads, self.head_dim)
+        k = self.k_proj(x).view(b, num_tokens, self.num_kv_heads, self.head_dim)
+        v = self.v_proj(x).view(b, num_tokens, self.num_kv_heads, self.head_dim)
+
+        if self.q_norm is not None and self.k_norm is not None:
+            q, k = self.q_norm(q), self.k_norm(k)
+
+        q = apply_rotary(q.transpose(1, 2), cos, sin)
+        k = apply_rotary(k.transpose(1, 2), cos, sin)
+        v = v.transpose(1, 2)
+
+        group_size = self.num_heads // self.num_kv_heads
+        k = k.repeat_interleave(group_size, dim=1)
+        v = v.repeat_interleave(group_size, dim=1)
+
+        out = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+        return self.o_proj(out.transpose(1, 2).reshape(b, num_tokens, -1))

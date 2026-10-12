@@ -9,21 +9,21 @@ from transformers.models.qwen3.modeling_qwen3 import (
 from llm_from_scratch.rope import RotaryEmbedding, apply_rotary
 
 HEAD_DIM = 16
-THETA = 10_000.0
+BASE = 10_000.0
 
 
 def make_positions(batch_size: int, num_tokens: int, start: int = 0) -> torch.Tensor:
     return torch.arange(start, start + num_tokens).expand(batch_size, num_tokens)
 
 
-def rotate(x: torch.Tensor, positions: torch.Tensor, theta: float = THETA):
+def rotate(x: torch.Tensor, positions: torch.Tensor, base: float = BASE):
     """x: (b, n_heads, num_tokens, head_dim)"""
-    cos, sin = RotaryEmbedding(x.shape[-1], theta)(positions)
+    cos, sin = RotaryEmbedding(x.shape[-1], base)(positions)
     return apply_rotary(x, cos, sin)
 
 
 def test_tables_have_one_angle_per_position_and_dimension():
-    cos, sin = RotaryEmbedding(HEAD_DIM, THETA)(make_positions(2, 5))
+    cos, sin = RotaryEmbedding(HEAD_DIM, BASE)(make_positions(2, 5))
 
     assert cos.shape == sin.shape == (2, 5, HEAD_DIM)
     assert cos.dtype == sin.dtype == torch.float32
@@ -73,14 +73,14 @@ def test_rows_can_be_at_different_positions():
 
 def test_matches_the_huggingface_qwen3_reference():
     # Qwen3-0.6B's real head size and base, at positions deep into the context.
-    head_dim, theta = 128, 1_000_000.0
-    hf_rope = Qwen3RotaryEmbedding(HFQwen3Config(head_dim=head_dim, rope_theta=theta))
+    head_dim, base = 128, 1_000_000.0
+    hf_rope = Qwen3RotaryEmbedding(HFQwen3Config(head_dim=head_dim, rope_theta=base))
     positions = torch.tensor([[0, 1, 2, 511, 2047, 30_000]])
     torch.manual_seed(123)
     q = torch.randn(1, 2, positions.shape[1], head_dim)
     k = torch.randn(1, 2, positions.shape[1], head_dim)
 
-    cos, sin = RotaryEmbedding(head_dim, theta)(positions)
+    cos, sin = RotaryEmbedding(head_dim, base)(positions)
     hf_cos, hf_sin = hf_rope(q, positions)
     hf_q, hf_k = apply_rotary_pos_emb(q, k, hf_cos, hf_sin)
 
@@ -106,6 +106,6 @@ def test_tables_stay_float32_when_the_module_is_cast_to_bf16():
 
 def test_apply_rotary_returns_the_input_dtype():
     x = torch.randn(1, 2, 3, HEAD_DIM, dtype=torch.bfloat16)
-    cos, sin = RotaryEmbedding(HEAD_DIM, THETA)(make_positions(1, 3))
+    cos, sin = RotaryEmbedding(HEAD_DIM, BASE)(make_positions(1, 3))
 
     assert apply_rotary(x, cos, sin).dtype == torch.bfloat16

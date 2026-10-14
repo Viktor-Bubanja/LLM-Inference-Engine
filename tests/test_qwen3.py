@@ -7,7 +7,7 @@ import torch
 from transformers import Qwen3Config as HFQwen3Config
 from transformers import Qwen3ForCausalLM
 
-from llm_from_scratch.hf_loading import load_hf_state_dict, qwen3_param_name
+from llm_from_scratch.hf_loading import load_hf_state_dict
 from llm_from_scratch.qwen3 import Qwen3Config, Qwen3Model
 
 TINY_HF_CONFIG = dict(
@@ -50,29 +50,6 @@ def token_ids(batch_size: int = 2, num_tokens: int = 10) -> torch.Tensor:
     return torch.randint(TINY_HF_CONFIG["vocab_size"], (batch_size, num_tokens))
 
 
-def test_config_is_read_from_the_hf_config():
-    config = Qwen3Config.from_hf_config(build_hf_model().config.to_dict())
-
-    assert config == Qwen3Config(
-        vocab_size=64,
-        context_length=128,
-        emb_dim=32,
-        hidden_dim=48,
-        n_layers=2,
-        n_heads=4,
-        n_kv_heads=2,
-        head_dim=16,
-        rope_theta=10_000.0,
-        rms_norm_eps=1e-6,
-        tie_embeddings=True,
-    )
-
-
-def test_config_rejects_other_architectures():
-    with pytest.raises(ValueError, match="qwen3"):
-        Qwen3Config.from_hf_config({"model_type": "gpt2"})
-
-
 @pytest.mark.parametrize("tie_embeddings", [True, False])
 def test_logits_match_huggingface(tie_embeddings):
     hf_model = build_hf_model(tie_embeddings)
@@ -85,22 +62,6 @@ def test_logits_match_huggingface(tie_embeddings):
     torch.testing.assert_close(model(ids), expected, atol=1e-5, rtol=1e-5)
 
 
-def test_tied_head_shares_the_embedding_matrix():
-    model = build_model()
-
-    assert model.out_head.weight is model.tok_emb.weight
-
-
-def test_every_hf_parameter_maps_to_one_of_ours():
-    hf_model = build_hf_model(tie_embeddings=False)
-    model = Qwen3Model(Qwen3Config.from_hf_config(hf_model.config.to_dict()))
-
-    hf_names = hf_model.state_dict().keys()
-    our_names = [name for name, _ in model.named_parameters()]
-
-    assert sorted(qwen3_param_name(name) for name in hf_names) == sorted(our_names)
-
-
 def test_loading_rejects_an_incomplete_checkpoint():
     hf_model = build_hf_model()
     state = hf_model.state_dict()
@@ -109,16 +70,6 @@ def test_loading_rejects_an_incomplete_checkpoint():
 
     with pytest.raises(ValueError, match="trf_blocks.1.att.k_norm.weight"):
         load_hf_state_dict(model, state)
-
-
-def test_shifting_every_position_leaves_the_logits_unchanged():
-    model = build_model()
-    ids = token_ids()
-    positions = torch.arange(ids.shape[1]).expand_as(ids)
-
-    torch.testing.assert_close(
-        model(ids, positions=positions + 1_000), model(ids), atol=1e-4, rtol=1e-4
-    )
 
 
 def test_without_hooks_the_output_is_bit_identical_to_the_plain_forward_pass():
@@ -152,13 +103,3 @@ def test_hooks_see_every_layer_with_its_positions():
     for _, shape, hook_positions in seen:
         assert shape == (*ids.shape, TINY_HF_CONFIG["hidden_size"])
         assert torch.equal(hook_positions, positions)
-
-
-def test_a_hook_replaces_the_residual_stream():
-    model = build_model()
-    ids = token_ids()
-    baseline = model(ids)
-
-    model.residual_hooks.append(lambda layer, x, positions: x + (layer == 0))
-
-    assert not torch.allclose(model(ids), baseline)

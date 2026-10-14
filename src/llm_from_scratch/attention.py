@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 
+from llm_from_scratch.kv_cache import KVCache
 from llm_from_scratch.layers import RMSNorm
 from llm_from_scratch.rope import apply_rotary
 
@@ -65,6 +66,17 @@ class MultiHeadAttention(torch.nn.Module):
         return self.out_proj(context_vecs)
 
 
+def cached_causal_mask(num_new: int, total: int, device=None) -> torch.Tensor:
+    """(num_new, total) bool: True where query i may attend to key j."""
+    return torch.cat(
+        (
+            torch.ones((num_new, total - num_new), dtype=torch.bool, device=device),
+            torch.tril(torch.ones((num_new, num_new), dtype=torch.bool, device=device)),
+        ),
+        dim=-1,
+    )
+
+
 class GroupedQueryAttention(torch.nn.Module):
     """Causal self-attention in which each group of ``num_heads // num_kv_heads``
     query heads shares one key/value head. With ``num_kv_heads == num_heads`` it
@@ -104,7 +116,12 @@ class GroupedQueryAttention(torch.nn.Module):
         self.k_norm = RMSNorm(head_dim, rms_norm_eps) if qk_norm else None
 
     def forward(
-        self, x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor
+        self,
+        x: torch.Tensor,
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+        cache: KVCache | None = None,
+        layer: int | None = None,
     ) -> torch.Tensor:
         """(b, num_tokens, d_in) -> (b, num_tokens, d_in)
 
@@ -123,9 +140,17 @@ class GroupedQueryAttention(torch.nn.Module):
         k = apply_rotary(k.transpose(1, 2), cos, sin)
         v = v.transpose(1, 2)
 
+        mask = None
+        if cache is not None and layer is not None:
+            k, v = cache.update(layer, k, v)
+            mask = cached_causal_mask(num_tokens, k.shape[2], device=x.device)
+
         group_size = self.num_heads // self.num_kv_heads
         k = k.repeat_interleave(group_size, dim=1)
         v = v.repeat_interleave(group_size, dim=1)
 
-        out = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+        is_causal = mask is None
+        out = F.scaled_dot_product_attention(
+            q, k, v, attn_mask=mask, is_causal=is_causal
+        )
         return self.o_proj(out.transpose(1, 2).reshape(b, num_tokens, -1))

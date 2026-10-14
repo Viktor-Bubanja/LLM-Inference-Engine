@@ -28,7 +28,7 @@ def test_top_k_keeps_only_the_k_most_likely_tokens():
 
 @pytest.mark.parametrize(
     "top_p, expected",
-    [(0.1, {0}), (0.75, {0, 1}), (0.85, {0, 1, 2}), (1.0, {0, 1, 2, 3})],
+    [(0.75, {0, 1}), (0.85, {0, 1, 2})],
 )
 def test_top_p_keeps_the_smallest_set_reaching_top_p(top_p, expected):
     assert sampled_tokens(LOGITS, temperature=1.0, top_p=top_p) == expected

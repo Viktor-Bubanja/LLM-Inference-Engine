@@ -24,14 +24,18 @@ class KVCache:
         dtype: torch.dtype = torch.float32,
         device: torch.device | str = "cpu",
     ):
-        raise NotImplementedError("M2 exercise")
+        shape = (n_layers, batch_size, n_kv_heads, max_len, head_dim)
+        self.max_len = max_len
+        self.k_buf = torch.zeros(shape, dtype=dtype, device=device)
+        self.v_buf = torch.zeros(shape, dtype=dtype, device=device)
+        self.counts = [0] * n_layers
 
     @property
     def length(self) -> int:
         """How many tokens every layer has stored: the tokens from all completed
         forward passes. The next token fed to the model is at this position.
         """
-        raise NotImplementedError("M2 exercise")
+        return self.counts[-1]
 
     def update(
         self, layer: int, k: torch.Tensor, v: torch.Tensor
@@ -45,4 +49,14 @@ class KVCache:
         Raises ``ValueError`` if the layer would hold more than ``max_len``
         tokens.
         """
-        raise NotImplementedError("M2 exercise")
+        num_new = k.shape[2]
+        start = self.counts[layer]
+        end = start + num_new
+        if end > self.max_len:
+            raise ValueError(
+                f"layer {layer} would hold {end} tokens, but max_len is {self.max_len}"
+            )
+        self.k_buf[layer, ..., start:end, :] = k
+        self.v_buf[layer, ..., start:end, :] = v
+        self.counts[layer] = end
+        return self.k_buf[layer, ..., :end, :], self.v_buf[layer, ..., :end, :]

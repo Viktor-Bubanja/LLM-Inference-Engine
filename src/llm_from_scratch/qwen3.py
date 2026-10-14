@@ -77,10 +77,15 @@ class Qwen3Block(nn.Module):
         self.ff = SwiGLU(config.emb_dim, config.hidden_dim)
 
     def forward(
-        self, x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor
+        self,
+        x: torch.Tensor,
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+        cache: KVCache | None = None,
+        layer: int | None = None,
     ) -> torch.Tensor:
         """(b, num_tokens, emb_dim) -> (b, num_tokens, emb_dim)"""
-        x = x + self.att(self.norm1(x), cos, sin)
+        x = x + self.att(x=self.norm1(x), cos=cos, sin=sin, cache=cache, layer=layer)
         return x + self.ff(self.norm2(x))
 
 
@@ -118,18 +123,17 @@ class Qwen3Model(nn.Module):
         to the cache, and ``positions`` default to continuing from
         ``cache.length``.
         """
-        if cache is not None:
-            raise NotImplementedError("M2 exercise")
         if positions is None:
+            start = cache.length if cache is not None else 0
             batch_size, num_tokens = token_ids.shape
-            positions = torch.arange(num_tokens, device=token_ids.device).expand(
-                batch_size, num_tokens
-            )
+            positions = torch.arange(
+                start=start, end=start + num_tokens, device=token_ids.device
+            ).expand(batch_size, num_tokens)
         cos, sin = self.rope(positions)
 
         x = self.tok_emb(token_ids)
         for layer, block in enumerate(self.trf_blocks):
-            x = block(x, cos, sin)
+            x = block(x, cos, sin, cache, layer)
             for hook in self.residual_hooks:
                 x = hook(layer, x, positions)
         x = self.final_norm(x)

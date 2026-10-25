@@ -37,6 +37,14 @@ class KVCache:
         """
         return self.counts[-1]
 
+    def truncate(self, length: int) -> None:
+        """Forget every token from position ``length`` on, in every layer, so
+        that the next forward pass continues from there.
+        """
+        if length > self.length:
+            raise ValueError(f"Can't truncate {self.length} tokens to {length}")
+        self.counts = [length] * len(self.counts)
+
     def update(
         self, layer: int, k: torch.Tensor, v: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:

@@ -1,7 +1,8 @@
 """Benchmark generation speed with and without the KV cache.
 
-Reports prefill and decode tokens per second, and memory, for one sequence:
-``uv run python -m llm_from_scratch.bench_generate --device mps``.
+Reports prefill and decode tokens per second, and memory, for one sequence,
+then the per-turn latency of an 8-turn chat with and without reusing the
+cache across turns: ``uv run python -m llm_from_scratch.bench_generate``.
 """
 
 import argparse
@@ -12,22 +13,37 @@ import time
 import torch
 
 from llm_from_scratch.causal_lm import CausalLM
+from llm_from_scratch.chat_format import ChatFormat
 from llm_from_scratch.device import get_device
-from llm_from_scratch.generation import generate
-from llm_from_scratch.hf_loading import QWEN3_0_6B_BASE, load_pretrained
+from llm_from_scratch.generation import ChatSession, generate
+from llm_from_scratch.hf_loading import QWEN3_1_7B, load_pretrained, load_tokenizer
+
+CHAT = [
+    "Can you suggest a vegetarian dinner I can cook in 30 minutes?",
+    "I don't have chickpeas. What can I use instead?",
+    "How long will the leftovers keep in the fridge?",
+    "Could I freeze it instead?",
+    "What side dish would go with it?",
+    "Is there a dessert that uses similar spices?",
+    "How would I make the whole meal for eight people?",
+    "Write me a shopping list for that.",
+]
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Benchmark generation speed with and without the KV cache."
     )
-    parser.add_argument("--model", default=QWEN3_0_6B_BASE)
+    parser.add_argument("--model", default=QWEN3_1_7B)
     parser.add_argument("--device", default=str(get_device()))
     parser.add_argument(
         "--dtype", default="float32", choices=["float32", "bfloat16", "float16"]
     )
     parser.add_argument("--prompt-tokens", type=int, default=512)
     parser.add_argument("--new-tokens", type=int, default=128)
+    parser.add_argument(
+        "--reply-tokens", type=int, default=64, help="Tokens per chat reply."
+    )
     return parser.parse_args()
 
 
@@ -69,6 +85,25 @@ def time_generation(
     return prompt.shape[1] / prefill, (len(stamps) - 1) / decode
 
 
+def time_chat(
+    model: CausalLM, chat_format: ChatFormat, reply_tokens: int, reuse_cache: bool
+) -> list[tuple[int, float]]:
+    """For each turn of ``CHAT``: the rendered prompt length and the seconds
+    taken to generate the whole reply.
+    """
+    session = ChatSession(
+        model, chat_format, max_new_tokens=reply_tokens, reuse_cache=reuse_cache
+    )
+    turns = []
+    for message in CHAT:
+        start = time.perf_counter()
+        list(session.reply(message))
+        seconds = time.perf_counter() - start
+        prompt_len = len(chat_format.render(session.messages[:-1]).token_ids)
+        turns.append((prompt_len, seconds))
+    return turns
+
+
 def main() -> None:
     args = parse_args()
     device = torch.device(args.device)
@@ -94,6 +129,17 @@ def main() -> None:
             f"| {device.type} | {args.dtype} | {'yes' if cache else 'no'} "
             f"| {prefill:,.0f} | {decode:,.1f} | {memory_gb(device):.2f} |"
         )
+
+    chat_format = ChatFormat(load_tokenizer(args.model))
+    print(f"\n{len(CHAT)}-turn chat, up to {args.reply_tokens} tokens per reply\n")
+    print("| turn | prompt tokens | cache reused (s) | from scratch (s) |")
+    print("|---|---|---|---|")
+    reused = time_chat(model, chat_format, args.reply_tokens, reuse_cache=True)
+    scratch = time_chat(model, chat_format, args.reply_tokens, reuse_cache=False)
+    for turn, ((prompt_len, reused_s), (_, scratch_s)) in enumerate(
+        zip(reused, scratch), start=1
+    ):
+        print(f"| {turn} | {prompt_len} | {reused_s:.2f} | {scratch_s:.2f} |")
 
 
 if __name__ == "__main__":

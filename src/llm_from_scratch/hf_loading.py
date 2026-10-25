@@ -16,11 +16,13 @@ from llm_from_scratch.qwen3 import Qwen3Config, Qwen3Model
 from llm_from_scratch.tokenizer import HFTokenizer
 
 QWEN3_0_6B_BASE = "Qwen/Qwen3-0.6B-Base"
+QWEN3_1_7B = "Qwen/Qwen3-1.7B"
 
 # Commits the checkpoints are pinned to, so results stay reproducible if the
 # Hub repos change.
 PINNED_REVISIONS = {
     QWEN3_0_6B_BASE: "da87bfb608c14b7cf20ba1ce41287e8de496c0cd",
+    QWEN3_1_7B: "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
 }
 
 # HF parameter name pattern -> our parameter name.
@@ -87,12 +89,20 @@ def load_hf_state_dict(model: Qwen3Model, hf_state: dict[str, torch.Tensor]) -> 
 
 
 def download_checkpoint(repo_id: str, revision: str | None = None) -> Path:
-    """Download (or reuse from the HF cache) the config, tokenizer and weights."""
+    """Download (or reuse from the HF cache) the config, tokenizer and weights.
+    ``tokenizer_config.json`` holds the chat template, which tests compare
+    ``ChatFormat`` against.
+    """
     return Path(
         snapshot_download(
             repo_id,
             revision=revision or PINNED_REVISIONS.get(repo_id),
-            allow_patterns=["config.json", "tokenizer.json", "*.safetensors"],
+            allow_patterns=[
+                "config.json",
+                "tokenizer.json",
+                "tokenizer_config.json",
+                "*.safetensors",
+            ],
         )
     )
 

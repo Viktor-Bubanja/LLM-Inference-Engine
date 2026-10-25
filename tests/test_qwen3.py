@@ -7,6 +7,7 @@ import torch
 from transformers import Qwen3Config as HFQwen3Config
 from transformers import Qwen3ForCausalLM
 
+from llm_from_scratch.causal_lm import TokenContext
 from llm_from_scratch.hf_loading import load_hf_state_dict
 from llm_from_scratch.qwen3 import Qwen3Config, Qwen3Model
 
@@ -86,20 +87,20 @@ def test_without_hooks_the_output_is_bit_identical_to_the_plain_forward_pass():
     assert torch.equal(model(ids), expected)
 
 
-def test_hooks_see_every_layer_with_its_positions():
+def test_hooks_see_every_layer_with_its_context():
     model = build_model()
     ids = token_ids()
-    positions = torch.arange(5, 5 + ids.shape[1]).expand_as(ids)
+    ctx = TokenContext.plain(*ids.shape, start=5)
     seen = []
 
-    def record(layer: int, x: torch.Tensor, hook_positions: torch.Tensor):
-        seen.append((layer, x.shape, hook_positions))
+    def record(layer: int, x: torch.Tensor, hook_ctx: TokenContext):
+        seen.append((layer, x.shape, hook_ctx))
         return x
 
     model.residual_hooks.append(record)
-    model(ids, positions=positions)
+    model(ids, ctx=ctx)
 
     assert [layer for layer, _, _ in seen] == [0, 1]
-    for _, shape, hook_positions in seen:
+    for _, shape, hook_ctx in seen:
         assert shape == (*ids.shape, TINY_HF_CONFIG["hidden_size"])
-        assert torch.equal(hook_positions, positions)
+        assert hook_ctx is ctx

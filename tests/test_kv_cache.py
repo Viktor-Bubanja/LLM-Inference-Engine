@@ -99,7 +99,7 @@ def test_position_dependent_hook_gives_the_same_logits_with_the_cache():
     model = build_model()
     direction = torch.randn(CONFIG.emb_dim)
     model.residual_hooks.append(
-        lambda layer, x, positions: x + 0.1 * positions[..., None] * direction
+        lambda layer, x, ctx: x + 0.1 * ctx.positions[..., None] * direction
     )
     ids = token_ids(8)
 

@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import torch
 
 
@@ -36,3 +38,22 @@ def sample_next_token(
 
     probas = torch.softmax(logits, dim=-1)
     return torch.multinomial(probas, num_samples=1, generator=generator)
+
+
+@dataclass(frozen=True)
+class Sampler:
+    """Sampling settings for ``sample_next_token``, bundled so that generation
+    code can take them as one argument. The default is greedy decoding.
+    """
+
+    temperature: float = 0.0
+    top_k: int | None = None
+    top_p: float | None = None
+
+    def __call__(
+        self, logits: torch.Tensor, generator: torch.Generator | None = None
+    ) -> torch.Tensor:
+        """(b, vocab_size) -> (b, 1)"""
+        return sample_next_token(
+            logits, self.temperature, self.top_k, self.top_p, generator
+        )

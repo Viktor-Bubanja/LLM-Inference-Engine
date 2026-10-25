@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 
 from llm_from_scratch.attention import GroupedQueryAttention
-from llm_from_scratch.causal_lm import ResidualHook
+from llm_from_scratch.causal_lm import ResidualHook, TokenContext
 from llm_from_scratch.kv_cache import KVCache
 from llm_from_scratch.layers import RMSNorm, SwiGLU
 from llm_from_scratch.rope import RotaryEmbedding
@@ -112,32 +112,46 @@ class Qwen3Model(nn.Module):
     def forward(
         self,
         token_ids: torch.Tensor,
-        positions: torch.Tensor | None = None,
         cache: KVCache | None = None,
+        ctx: TokenContext | None = None,
     ) -> torch.Tensor:
         """(b, num_tokens) -> (b, num_tokens, vocab_size) logits
 
         With a ``cache``, ``token_ids`` are the tokens that follow the ones
         already cached: the whole prompt on the first call (prefill), then one
         or more new tokens per call (decode). Their keys and values are added
-        to the cache, and ``positions`` default to continuing from
-        ``cache.length``.
+        to the cache.
+
+        ``ctx`` gives the tokens' positions, which RoPE uses, and their turns
+        and roles, which only the residual hooks use. It defaults to plain text
+        continuing from ``cache.length``.
         """
-        if positions is None:
-            start = cache.length if cache is not None else 0
+        if ctx is None:
             batch_size, num_tokens = token_ids.shape
-            positions = torch.arange(
-                start=start, end=start + num_tokens, device=token_ids.device
-            ).expand(batch_size, num_tokens)
-        cos, sin = self.rope(positions)
+            start = cache.length if cache is not None else 0
+            ctx = TokenContext.plain(batch_size, num_tokens, start, token_ids.device)
+        cos, sin = self.rope(ctx.positions)
 
         x = self.tok_emb(token_ids)
         for layer, block in enumerate(self.trf_blocks):
             x = block(x, cos, sin, cache, layer)
             for hook in self.residual_hooks:
-                x = hook(layer, x, positions)
+                x = hook(layer, x, ctx)
         x = self.final_norm(x)
         return self.out_head(x)
+
+    def new_cache(self, batch_size: int, max_len: int) -> KVCache:
+        """An empty KV cache for this model, on its device and in its dtype."""
+        weight = self.tok_emb.weight
+        return KVCache(
+            n_layers=self.config.n_layers,
+            batch_size=batch_size,
+            n_kv_heads=self.config.n_kv_heads,
+            max_len=max_len,
+            head_dim=self.config.head_dim,
+            dtype=weight.dtype,
+            device=weight.device,
+        )
 
 
 def parse_args() -> argparse.Namespace:

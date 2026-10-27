@@ -1,0 +1,82 @@
+{
+  "benchmark": "chat",
+  "device": "mps",
+  "dtype": "bfloat16",
+  "revisions": {
+    "Qwen/Qwen3-0.6B-Base": "da87bfb608c14b7cf20ba1ce41287e8de496c0cd",
+    "Qwen/Qwen3-1.7B": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e"
+  },
+  "machine": {
+    "chip": "Apple M3 Pro",
+    "os": "macOS-14.6-arm64-arm-64bit",
+    "torch": "2.14.1"
+  },
+  "model": "Qwen/Qwen3-1.7B",
+  "reply_tokens": 256,
+  "rows": [
+    {
+      "turn": 1,
+      "prompt_tokens": 27,
+      "reused_first_token_s": 0.06219691599835642,
+      "scratch_first_token_s": 0.06175150000490248,
+      "reused_reply_s": 9.497799333003059,
+      "scratch_reply_s": 8.751252875001228
+    },
+    {
+      "turn": 2,
+      "prompt_tokens": 307,
+      "reused_first_token_s": 0.2540317499951925,
+      "scratch_first_token_s": 0.28406370900484035,
+      "reused_reply_s": 10.246837792001315,
+      "scratch_reply_s": 9.367074209003476
+    },
+    {
+      "turn": 3,
+      "prompt_tokens": 583,
+      "reused_first_token_s": 0.26075495799886994,
+      "scratch_first_token_s": 0.5213457089994336,
+      "reused_reply_s": 10.739411624999775,
+      "scratch_reply_s": 9.683055875000719
+    },
+    {
+      "turn": 4,
+      "prompt_tokens": 853,
+      "reused_first_token_s": 0.2699611249990994,
+      "scratch_first_token_s": 0.7158091669989517,
+      "reused_reply_s": 10.995975207995798,
+      "scratch_reply_s": 10.39971874999901
+    },
+    {
+      "turn": 5,
+      "prompt_tokens": 1127,
+      "reused_first_token_s": 0.2721575830000802,
+      "scratch_first_token_s": 0.9467176660036785,
+      "reused_reply_s": 11.798816832997545,
+      "scratch_reply_s": 11.179976666004222
+    },
+    {
+      "turn": 6,
+      "prompt_tokens": 1402,
+      "reused_first_token_s": 0.2869686249978258,
+      "scratch_first_token_s": 1.190668208997522,
+      "reused_reply_s": 12.442176874996221,
+      "scratch_reply_s": 11.614349416995537
+    },
+    {
+      "turn": 7,
+      "prompt_tokens": 1679,
+      "reused_first_token_s": 0.294911333003256,
+      "scratch_first_token_s": 1.4479042499951902,
+      "reused_reply_s": 13.087768458004575,
+      "scratch_reply_s": 12.379148333995545
+    },
+    {
+      "turn": 8,
+      "prompt_tokens": 1953,
+      "reused_first_token_s": 0.283375041995896,
+      "scratch_first_token_s": 1.685952667001402,
+      "reused_reply_s": 13.240891292000015,
+      "scratch_reply_s": 13.454648124999949
+    }
+  ]
+}

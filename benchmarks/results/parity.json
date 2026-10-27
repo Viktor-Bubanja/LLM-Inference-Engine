@@ -1,0 +1,30 @@
+{
+  "benchmark": "parity",
+  "device": "cpu",
+  "dtype": "float32",
+  "revisions": {
+    "Qwen/Qwen3-0.6B-Base": "da87bfb608c14b7cf20ba1ce41287e8de496c0cd",
+    "Qwen/Qwen3-1.7B": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e"
+  },
+  "machine": {
+    "chip": "Apple M3 Pro",
+    "os": "macOS-14.6-arm64-arm-64bit",
+    "torch": "2.14.1"
+  },
+  "rows": [
+    {
+      "model": "Qwen/Qwen3-0.6B-Base",
+      "prompt_tokens": 15,
+      "max_abs_logit_diff": 0.0,
+      "greedy_tokens": 64,
+      "first_mismatch": null
+    },
+    {
+      "model": "Qwen/Qwen3-1.7B",
+      "prompt_tokens": 15,
+      "max_abs_logit_diff": 0.0,
+      "greedy_tokens": 64,
+      "first_mismatch": null
+    }
+  ]
+}

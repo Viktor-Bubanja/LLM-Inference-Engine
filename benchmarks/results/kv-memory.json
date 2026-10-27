@@ -1,0 +1,32 @@
+{
+  "benchmark": "kv-memory",
+  "device": "mps",
+  "dtype": "bfloat16",
+  "revisions": {
+    "Qwen/Qwen3-0.6B-Base": "da87bfb608c14b7cf20ba1ce41287e8de496c0cd",
+    "Qwen/Qwen3-1.7B": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e"
+  },
+  "machine": {
+    "chip": "Apple M3 Pro",
+    "os": "macOS-14.6-arm64-arm-64bit",
+    "torch": "2.14.1"
+  },
+  "rows": [
+    {
+      "model": "Qwen/Qwen3-0.6B-Base",
+      "n_layers": 28,
+      "gqa_kv_heads": 8,
+      "gqa_bytes_per_token": 114688,
+      "mha_kv_heads": 16,
+      "mha_bytes_per_token": 229376
+    },
+    {
+      "model": "Qwen/Qwen3-1.7B",
+      "n_layers": 28,
+      "gqa_kv_heads": 8,
+      "gqa_bytes_per_token": 114688,
+      "mha_kv_heads": 16,
+      "mha_bytes_per_token": 229376
+    }
+  ]
+}

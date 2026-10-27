@@ -1,0 +1,33 @@
+{
+  "benchmark": "hf",
+  "device": "mps",
+  "dtype": "bfloat16",
+  "revisions": {
+    "Qwen/Qwen3-0.6B-Base": "da87bfb608c14b7cf20ba1ce41287e8de496c0cd",
+    "Qwen/Qwen3-1.7B": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e"
+  },
+  "machine": {
+    "chip": "Apple M3 Pro",
+    "os": "macOS-14.6-arm64-arm-64bit",
+    "torch": "2.14.1"
+  },
+  "prompt_tokens": 512,
+  "new_tokens": 128,
+  "repeats": 3,
+  "rows": [
+    {
+      "model": "Qwen/Qwen3-0.6B-Base",
+      "ours_prefill_tok_s": 2795.690704864289,
+      "hf_prefill_tok_s": 3582.236776557406,
+      "ours_decode_tok_s": 55.209865959664306,
+      "hf_decode_tok_s": 74.64658591537571
+    },
+    {
+      "model": "Qwen/Qwen3-1.7B",
+      "ours_prefill_tok_s": 1266.2752916448562,
+      "hf_prefill_tok_s": 1518.570978188139,
+      "ours_decode_tok_s": 27.73478264677594,
+      "hf_decode_tok_s": 32.48984903020496
+    }
+  ]
+}

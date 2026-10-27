@@ -1,1 +1,1 @@
-"""General model code: architectures, weight loading, generation and training."""
+"""Qwen3 inference in pure PyTorch: the model, weight loading and generation."""

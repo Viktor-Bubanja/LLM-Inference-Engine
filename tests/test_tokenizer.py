@@ -1,31 +1,6 @@
 import tokenizers
 
-from llm_from_scratch.tokenizer import (
-    HFTokenizer,
-    TiktokenTokenizer,
-    get_tokenizer,
-    text_to_token_ids,
-    token_ids_to_text,
-)
-
-
-def test_text_round_trips_through_a_batch_of_one():
-    tokenizer = get_tokenizer()
-    text = "Every effort moves you"
-
-    token_ids = text_to_token_ids(text, tokenizer)
-
-    assert token_ids.shape == (1, len(tokenizer.encode(text)))
-    assert token_ids_to_text(token_ids, tokenizer) == text
-
-
-def test_tiktoken_tokenizer_exposes_gpt2_special_ids():
-    tokenizer = TiktokenTokenizer()
-    text = "Every effort moves you"
-
-    assert tokenizer.eos_id == 50256
-    assert tokenizer.vocab_size == 50257
-    assert tokenizer.decode(tokenizer.encode(text)) == text
+from llm_from_scratch.tokenizer import HFTokenizer
 
 
 def test_hf_tokenizer_round_trips_without_adding_special_tokens(tmp_path):

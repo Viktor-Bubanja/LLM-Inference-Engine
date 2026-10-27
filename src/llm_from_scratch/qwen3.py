@@ -2,7 +2,6 @@
 attention and QK-norm.
 """
 
-import argparse
 from dataclasses import dataclass
 from typing import Any
 
@@ -152,54 +151,3 @@ class Qwen3Model(nn.Module):
             dtype=weight.dtype,
             device=weight.device,
         )
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Continue a prompt with pretrained Qwen3-0.6B-Base."
-    )
-    parser.add_argument(
-        "prompt",
-        nargs="?",
-        default="The history of the alpaca begins",
-        help="Text to continue.",
-    )
-    parser.add_argument(
-        "--max-new-tokens", type=int, default=60, help="Tokens to generate."
-    )
-    parser.add_argument("--temperature", type=float, default=0.8)
-    parser.add_argument("--top-p", type=float, default=0.95)
-    parser.add_argument("--seed", type=int, default=123)
-    return parser.parse_args()
-
-
-def main() -> None:
-    from llm_from_scratch.device import get_device
-    from llm_from_scratch.gpt_model import generate
-    from llm_from_scratch.hf_loading import (
-        QWEN3_0_6B_BASE,
-        load_pretrained,
-        load_tokenizer,
-    )
-
-    args = parse_args()
-    torch.manual_seed(args.seed)
-    device = get_device()
-    model = load_pretrained(QWEN3_0_6B_BASE, device=device)
-    tokenizer = load_tokenizer(QWEN3_0_6B_BASE)
-
-    prompt_ids = torch.tensor([tokenizer.encode(args.prompt)], device=device)
-    out = generate(
-        model=model,
-        token_ids=prompt_ids,
-        max_new_tokens=args.max_new_tokens,
-        context_size=model.config.context_length,
-        temperature=args.temperature,
-        top_p=args.top_p,
-        eos_id=tokenizer.eos_id,
-    )
-    print(tokenizer.decode(out[0].tolist()))
-
-
-if __name__ == "__main__":
-    main()

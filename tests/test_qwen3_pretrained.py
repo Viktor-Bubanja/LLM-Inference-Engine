@@ -8,7 +8,7 @@ import pytest
 import torch
 from transformers import AutoModelForCausalLM
 
-from llm_from_scratch.gpt_model import generate
+from llm_from_scratch.generation import generate
 from llm_from_scratch.hf_loading import (
     QWEN3_0_6B_BASE,
     download_checkpoint,
@@ -48,9 +48,8 @@ def test_logits_match_transformers_in_fp32(models, prompt_ids):
 def test_greedy_continuation_matches_transformers(models, prompt_ids):
     model, hf_model = models
 
-    out = generate(
-        model, prompt_ids, max_new_tokens=20, context_size=model.config.context_length
-    )
+    new_ids = torch.stack(list(generate(model, prompt_ids, max_new_tokens=20)), dim=1)
+    out = torch.cat((prompt_ids, new_ids), dim=1)
     expected = hf_model.generate(prompt_ids, max_new_tokens=20, do_sample=False)
 
     assert torch.equal(out, expected)

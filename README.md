@@ -2,17 +2,22 @@
 
 [![CI](https://github.com/Viktor-Bubanja/llm-from-scratch/actions/workflows/ci.yml/badge.svg)](https://github.com/Viktor-Bubanja/llm-from-scratch/actions/workflows/ci.yml)
 
-A from-scratch implementation of [Qwen3](https://huggingface.co/Qwen) (0.6B
-and 1.7B) that loads the official weights and generates text, with no
-`transformers` code at runtime: just PyTorch, `safetensors` and `tokenizers`.
+I started this project by following Sebastian Raschka's excellent
+[*Build a Large Language Model (From Scratch)*](https://github.com/rasbt/LLMs-from-scratch),
+and enjoyed it enough to keep going past the last chapter. This repo is where
+I went next: [Qwen3](https://huggingface.co/Qwen) (0.6B and 1.7B) built from
+scratch, with RoPE, grouped-query attention and QK-norm, running the official
+weights. There's no `transformers` code at runtime, just PyTorch,
+`safetensors` and `tokenizers`.
 
-- **Verified against Hugging Face:** in fp32, the logits are bit-identical
-  to `transformers`, and greedy decoding produces the same tokens.
+- **Verified against Hugging Face:** in fp32 the logits are bit-identical to
+  `transformers`, and greedy decoding produces the same tokens.
 - **A KV cache built for chat:** keys are cached after RoPE, the causal mask
-  is offset for cached decoding, and a multi-turn chat reuses the cache
+  accounts for the cached tokens, and a multi-turn chat reuses the cache
   across turns instead of re-reading the whole conversation.
-- **Measured:** the benchmarks below show what the cache buys, and how this
-  compares with `transformers` on the same machine.
+- **Benchmarked:** how much time the cache saves as the context grows, how
+  much memory grouped-query attention saves, and how the speed compares with
+  `transformers` on the same machine.
 
 ## Results
 
@@ -121,25 +126,6 @@ uv run pytest -m network                   # parity with transformers on the rea
 uv run python benchmarks/run.py decode     # or chat, kv-memory, hf, parity
 uv run python benchmarks/plot.py           # plots and tables from the results
 ```
-
-## Tests
-
-The tests target mistakes that are easy to make and fail silently:
-
-- RoPE scores depend only on relative position, and match the Hugging Face
-  reference.
-- Grouped heads equal multi-head attention with repeated key/value heads.
-- Cached logits and greedy generation match full recomputation.
-- Reusing the cache across chat turns gives the same replies as starting
-  each turn from scratch, and prefills only the new tokens.
-- The chat format matches `apply_chat_template` token for token.
-- A position-dependent hook gives the same logits with and without the
-  cache.
-- Logits and greedy output match `transformers` on the real weights
-  (`-m network`).
-
-The fast tests use a tiny random model and a byte-level chat format, so CI
-downloads nothing.
 
 ## Credits
 

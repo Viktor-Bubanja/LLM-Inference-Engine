@@ -1,6 +1,6 @@
-# LLM from scratch: Qwen3 inference in pure PyTorch
+# LLM Inference Engine: Qwen3 in pure PyTorch
 
-[![CI](https://github.com/Viktor-Bubanja/llm-from-scratch/actions/workflows/ci.yml/badge.svg)](https://github.com/Viktor-Bubanja/llm-from-scratch/actions/workflows/ci.yml)
+[![CI](https://github.com/Viktor-Bubanja/LLM-Inference-Engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Viktor-Bubanja/LLM-Inference-Engine/actions/workflows/ci.yml)
 
 I started this project by following Sebastian Raschka's excellent
 [*Build a Large Language Model (From Scratch)*](https://github.com/rasbt/LLMs-from-scratch),

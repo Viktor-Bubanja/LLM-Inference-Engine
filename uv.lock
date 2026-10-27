@@ -669,7 +669,7 @@ wheels = [
 ]
 
 [[package]]
-name = "llm-from-scratch"
+name = "llm-inference-engine"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

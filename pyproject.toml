@@ -1,0 +1,48 @@
+[project]
+name = "llm-from-scratch"
+version = "0.1.0"
+description = "Qwen3 inference in pure PyTorch, verified against Hugging Face transformers"
+readme = "README.md"
+license = "Apache-2.0"
+authors = [
+    { name = "Viktor Bubanja", email = "viktor.bubanja@hotmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "huggingface-hub>=2.2.0",
+    "safetensors>=0.8.0",
+    "tokenizers>=0.23.3",
+    "torch>=2.14.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.7,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+addopts = "-m 'not network'"
+markers = [
+    "network: downloads real Qwen3 weights from the Hugging Face Hub",
+    "slow: takes more than a few seconds",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+
+[dependency-groups]
+dev = [
+    "matplotlib>=3.11.1",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
+    "transformers>=5.19.0",
+]
